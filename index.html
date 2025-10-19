@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AV Designs - Quote Portal</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        // Custom Tailwind Configuration for the new AV Designs color palette
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'av-primary': '#047857', // Deep Teal/Green for buttons, accents, and links
+                        'av-light': '#a7f3d0',  // Light Green for card icons/backgrounds
+                        'av-bg': '#fcfbf8',     // Light Cream/Beige Background (F7F7F9 look)
+                        'av-card': '#ffffff',   // White Card Background
+                        'av-border': '#e5e7eb', // Light Gray Border
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Use Inter Font -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #fcfbf8; /* New background color */
+        }
+        /* Custom styling for the file input appearance */
+        .custom-file-input::-webkit-file-upload-button {
+            visibility: hidden;
+        }
+        .custom-file-input::before {
+            content: attr(data-text); /* Uses data-text attribute for dynamic label */
+            display: inline-block;
+            background: #047857; /* av-primary */
+            color: white;
+            border: 1px solid #065f46;
+            border-radius: 0.5rem;
+            padding: 0.5rem 1rem;
+            outline: none;
+            white-space: nowrap;
+            -webkit-user-select: none;
+            cursor: pointer;
+            font-weight: 500;
+            text-align: center;
+        }
+        .custom-file-input:hover::before {
+            background: #065f46;
+        }
+        .custom-file-input:active::before {
+            background: #064e3b;
+        }
+        .image-preview-container {
+            height: 120px;
+            width: 100%;
+            background-color: #f3f4f6;
+            border-radius: 0.5rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            border: 1px solid #e5e7eb;
+        }
+        .image-preview-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        /* Styling for the new modal overlay */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            z-index: 50;
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4 flex items-center justify-center">
+
+    <!-- --- SUCCESS MODAL --- -->
+    <div id="success-modal" class="modal-overlay hidden justify-center items-center">
+        <div class="bg-av-card rounded-xl shadow-2xl w-full max-w-sm p-6 space-y-4 transform scale-100 transition-transform duration-300">
+            <div class="text-center">
+                <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-av-light">
+                    <!-- Checkmark Icon -->
+                    <svg class="h-6 w-6 text-av-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                </div>
+                <h3 class="mt-3 text-lg leading-6 font-medium text-gray-900">Request Submitted!</h3>
+                <div class="mt-2">
+                    <p id="modal-message" class="text-sm text-gray-500 font-medium break-all">
+                        <!-- Message populated by JS -->
+                    </p>
+                </div>
+            </div>
+            <button onclick="closeSuccessModal()" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-av-primary text-base font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-av-primary sm:text-sm">
+                Close to Continue
+            </button>
+        </div>
+    </div>
+    <!-- --------------------- -->
+
+    <div id="app" class="w-full max-w-xl bg-av-card shadow-xl rounded-xl p-6 md:p-8 space-y-6">
+        
+        <!-- Header with Logo -->
+        <div class="flex flex-col items-center justify-center space-y-2 mb-4">
+            <img src="http://avdesigns.org/wp-content/uploads/2016/10/cropped-cropped-ourlogo-1.png" alt="AV Designs Logo" class="w-32 h-auto object-contain">
+            <h1 class="text-3xl font-extrabold text-gray-800 text-center">AV Designs Quote Portal</h1>
+            <p class="text-md text-gray-500">How can we help you create something beautiful?</p>
+        </div>
+        
+        <!-- Admin Navigation Bar (Hidden for non-admin users) -->
+        <div id="navigation-bar" class="flex space-x-2 p-2 bg-gray-100 rounded-lg hidden">
+            <button onclick="showView('selection')" id="nav-form" class="py-2 font-semibold rounded-lg transition duration-150 bg-av-primary text-white flex-1">
+                New Quote Form
+            </button>
+            <!-- Admin Viewer Button -->
+            <button onclick="showView('viewer')" id="nav-viewer" class="flex-1 py-2 font-semibold rounded-lg transition duration-150 text-av-primary bg-gray-200 hover:bg-gray-300 hidden">
+                View Saved Quotes
+            </button>
+        </div>
+
+        <!-- --- 1A. PROJECT SELECTION VIEW (New Home Screen - Default for clients) --- -->
+        <div id="project-selection-view" class="space-y-6">
+            <h2 class="text-xl font-bold text-gray-800 text-center mb-4">Select Your Project Type</h2>
+            <div class="grid grid-cols-1 gap-4">
+                
+                <!-- CARD 1: BLINDS -->
+                <button onclick="selectProjectType('Blinds')" class="project-card flex items-center p-6 bg-av-card border border-av-border rounded-xl shadow-md hover:shadow-xl transition duration-300 transform hover:scale-[1.01] text-left">
+                    <div class="p-3 mr-4 bg-av-light rounded-full flex-shrink-0">
+                        <!-- Icon: Blinds (Inline SVG for simplicity and color control) -->
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-av-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h14c1.1 0 2 .9 2 2v14c0 1.1-.9 2-2 2H5c-1.1 0-2-.9-2-2V5c0-1.1.9-2 2-2z"/><path d="M7 3v18M12 3v18M17 3v18"/></svg>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-bold text-gray-800">Blinds & Window Treatments</h3>
+                        <p class="text-sm text-gray-500 mt-1">For curtains, shutters, venetians, and general window coverings.</p>
+                    </div>
+                </button>
+
+                <!-- CARD 2: BESPOKE WOODEN ITEMS (Matching the image) -->
+                <button onclick="selectProjectType('Bespoke Wooden Items')" class="project-card flex items-center p-6 bg-av-card border border-av-border rounded-xl shadow-md hover:shadow-xl transition duration-300 transform hover:scale-[1.01] text-left">
+                    <div class="p-3 mr-4 bg-av-light rounded-full flex-shrink-0">
+                         <!-- Icon: Bespoke Wood/Furniture -->
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-av-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21h-6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2z"/><path d="M18 10h-2M18 14h-2M15 6h2M15 18h2M12 6h2M12 18h2"/></svg>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-bold text-gray-800">Bespoke Wooden Items</h3>
+                        <p class="text-sm text-gray-500 mt-1">For custom furniture, coffee tables, shelving, and unique installations.</p>
+                    </div>
+                </button>
+                
+                <!-- CARD 3: OTHER -->
+                 <button onclick="selectProjectType('Other')" class="project-card flex items-center p-6 bg-av-card border border-av-border rounded-xl shadow-md hover:shadow-xl transition duration-300 transform hover:scale-[1.01] text-left">
+                    <div class="p-3 mr-4 bg-gray-200 rounded-full flex-shrink-0">
+                        <!-- Icon: Other -->
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-bold text-gray-800">General / Other Projects</h3>
+                        <p class="text-sm text-gray-500 mt-1">If your request doesn't fit the categories above.</p>
+                    </div>
+                </button>
+
+            </div>
+        </div>
+
+        <!-- --- 1B. QUOTE FORM VIEW (Details - hidden initially) --- -->
+        <div id="quote-form-view" class="space-y-6 hidden">
+
+            <!-- Back Button -->
+            <button onclick="showView('selection')" class="flex items-center text-sm font-medium text-gray-500 hover:text-av-primary transition duration-150">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+                Back to Project Selection
+            </button>
+
+            <h2 id="form-title" class="text-2xl font-bold text-av-primary mb-4">Request Quote</h2>
+            <input type="hidden" id="projectType"> <!-- Hidden input to hold the selected type -->
+
+            <!-- Customer Details Section (1) -->
+            <div class="space-y-4 border border-av-border p-4 rounded-xl shadow-sm">
+                <h2 class="text-lg font-semibold text-gray-700">1. Your Contact Details (Required)</h2>
+                <div>
+                    <label for="customerName" class="block text-sm font-medium text-gray-700">Customer Name</label>
+                    <input type="text" id="customerName" class="mt-1 block w-full rounded-lg border-av-border shadow-sm p-3 focus:border-av-primary focus:ring-av-primary border" placeholder="John Doe">
+                </div>
+                <div>
+                    <label for="customerEmail" class="block text-sm font-medium text-gray-700">Email Address</label>
+                    <input type="email" id="customerEmail" class="mt-1 block w-full rounded-lg border-av-border shadow-sm p-3 focus:border-av-primary focus:ring-av-primary border" placeholder="john.doe@example.com">
+                </div>
+                <div>
+                    <label for="customerMobile" class="block text-sm font-medium text-gray-700">Mobile No</label>
+                    <input type="text" id="customerMobile" class="mt-1 block w-full rounded-lg border-av-border shadow-sm p-3 focus:border-av-primary focus:ring-av-primary border" placeholder="+27 83 123 4567">
+                </div>
+            </div>
+            
+            <!-- DYNAMIC: Container for Project Requirements (Section 2) and Images (Section 3) -->
+            <div id="project-details-container" class="space-y-6 hidden">
+
+                <!-- Project Details Section (Section 2: Requirements) -->
+                <div class="bg-av-light/20 p-4 rounded-xl space-y-4 border border-av-light">
+                    <h2 class="text-lg font-semibold text-av-primary">2. Detailed Requirements</h2>
+                    
+                    <!-- DYNAMIC: BLINDS SPECIFIC FIELDS (Hidden by default) -->
+                    <div id="blinds-fields-section" class="space-y-4 pt-3 border-t border-av-light hidden">
+                        <h3 class="text-md font-semibold text-av-primary">Blinds Requirements (Required for Blinds)</h3>
+                        <div class="grid grid-cols-3 gap-4">
+                            <div>
+                                <label for="width_mm" class="block text-sm font-medium text-gray-700">Width (mm)</label>
+                                <input type="number" id="width_mm" min="1" step="1" class="mt-1 block w-full rounded-lg border-av-border shadow-sm p-3 border" placeholder="e.g., 1200">
+                            </div>
+                            <div>
+                                <label for="length_mm" class="block text-sm font-medium text-gray-700">Length (mm)</label>
+                                <input type="number" id="length_mm" min="1" step="1" class="mt-1 block w-full rounded-lg border-av-border shadow-sm p-3 border" placeholder="e.g., 2000">
+                            </div>
+                            <div>
+                                <label for="quantity" class="block text-sm font-medium text-gray-700">Quantity</label>
+                                <input type="number" id="quantity" min="1" step="1" value="1" class="mt-1 block w-full rounded-lg border-av-border shadow-sm p-3 border" placeholder="e.g., 4">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Detailed Project Notes Area (Visible for all) -->
+                    <div>
+                        <label for="projectNotes" class="block text-sm font-medium text-gray-700">Detailed Project Notes / Special Instructions</label>
+                        <textarea id="projectNotes" rows="3" class="mt-1 block w-full rounded-lg border-av-border shadow-sm p-3 focus:border-av-primary focus:ring-av-primary border" placeholder="Describe installation requirements, material specifics, or if the dimensions above are for one of multiple items."></textarea>
+                    </div>
+                </div>
+
+                <!-- Image Uploads (Section 3) -->
+                <div class="space-y-4 p-4 border border-av-border rounded-xl shadow-sm">
+                    <h2 class="text-lg font-semibold text-gray-700">3. Reference Images (Optional but recommended)</h2>
+
+                    <!-- Primary Image -->
+                    <div class="space-y-3">
+                        <label id="primary-image-label" class="block text-sm font-medium text-gray-700">Photo of Area / Main Reference</label>
+                        <div id="primary-image-preview" class="image-preview-container mb-2">
+                            <span class="text-gray-400 text-sm">Primary Photo Preview</span>
+                        </div>
+                        <input type="file" id="primaryProjectImage" accept="image/*" class="custom-file-input w-full" data-text="Upload Primary Image" onchange="handleImageUpload(event, 'primary')">
+                    </div>
+
+                    <!-- Secondary Image (Note/Sketch - Hides for Blinds) -->
+                    <div id="secondary-image-container" class="space-y-3 pt-4 border-t border-gray-200">
+                        <label class="block text-sm font-medium text-gray-700">Secondary Image (Design Sketch or Additional Reference)</label>
+                        <div id="secondary-image-preview" class="image-preview-container mb-2">
+                            <span class="text-gray-400 text-sm">Secondary Image Preview</span>
+                        </div>
+                        <input type="file" id="secondaryProjectImage" accept="image/*" class="custom-file-input w-full" data-text="Upload Secondary Image" onchange="handleImageUpload(event, 'secondary')">
+                    </div>
+                </div>
+            </div>
+
+            <!-- CAPTCHA (Section 4) -->
+            <div class="space-y-4 p-4 border border-av-primary bg-av-light/20 rounded-xl shadow-sm">
+                <h2 class="text-lg font-semibold text-av-primary">4. Security Check</h2>
+                <div>
+                    <!-- Captcha label generated by JS -->
+                    <label for="captchaInput" id="captchaLabel" class="block text-sm font-medium text-gray-700">Please solve: 3 + 5 = ?</label>
+                    <input type="text" id="captchaInput" class="mt-1 block w-full rounded-lg border-av-border shadow-sm p-3 focus:border-av-primary focus:ring-av-primary border" placeholder="Enter the answer">
+                </div>
+            </div>
+
+            <!-- Submit Button -->
+            <button onclick="submitQuote()" id="submitButton" class="w-full py-3 bg-av-primary text-white font-semibold rounded-lg shadow-md hover:bg-green-700 transition duration-150 disabled:bg-av-primary/50" disabled>
+                Submit Quote Request
+            </button>
+
+            <!-- Status Message (Kept for errors/warnings) -->
+            <div id="statusMessage" class="text-center text-sm mt-4 hidden"></div>
+        </div>
+
+        <!-- --- 2. QUOTE VIEWER SCREEN (Admin View) --- -->
+        <div id="quote-viewer-view" class="space-y-6 hidden">
+            <h2 class="text-xl font-bold text-av-primary mb-4">Saved Quote Requests (Admin View)</h2>
+            <div id="admin-warning" class="bg-red-100 border-l-4 border-red-500 p-4 rounded-lg hidden">
+                <p class="text-sm font-medium text-red-800">Access Denied: This view is restricted to the **Admin User ID** only.</p>
+            </div>
+            
+            <p id="loadingIndicator" class="text-gray-500 text-sm italic">Loading saved quotes...</p>
+            <div id="quoteList" class="space-y-4">
+                <!-- Quote items will be rendered here -->
+            </div>
+            <p id="noQuotesMessage" class="text-gray-500 text-sm italic hidden">No quote requests found yet. Submit one from the "New Quote Form"!</p>
+        </div>
+
+
+        <!-- Footer Contact & Information (UPDATED) -->
+        <div class="space-y-3 pt-4 border-t border-gray-200 mt-6">
+            <div class="flex flex-col md:flex-row items-center justify-center space-y-3 md:space-y-0 md:space-x-4">
+                <p class="text-base font-semibold text-gray-700 whitespace-nowrap">
+                    Contact Ryan @ <span class="text-lg font-bold text-av-primary">+27 83 592 1101</span>
+                </p>
+                <a href="https://wa.me/27835921101" target="_blank" class="inline-flex items-center px-4 py-2 bg-av-primary text-white font-semibold rounded-lg shadow-md hover:bg-green-700 transition duration-150 text-sm">
+                    <!-- WhatsApp Icon (Inline SVG) -->
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 24 24" fill="currentColor"><path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.42 1.34 4.88l-1.4 5.14 5.3-1.38c1.45.83 3.1 1.27 4.67 1.27 5.46 0 9.91-4.45 9.91-9.91s-4.45-9.91-9.91-9.91zm4.79 13.91l-.22-.36c-.49-.78-.99-.87-1.48-.22l-.24.32c-.17.2-.33.22-.64.1-.31-.1-.76-.25-1.57-.65-.79-.39-1.47-1.12-1.74-1.58-.26-.45-.03-.7-.5-.95l-.2-.3c-.15-.24-.26-.45-.26-.7 0-.58.15-.83.33-1.01.18-.18.39-.24.5-.24h.34c.16 0 .28.05.42.34.13.3.16.73.08 1.14-.08.4-.24.8-.44 1.21-.21.41-.38.58-.2.91.19.34.64 1.05 1.28 1.48.65.43 1.28.6 1.63.74.34.13.54.2.73.1.2-.1.52-.45.69-.74.17-.3.33-.37.52-.37.2 0 .59.18 1.05.51.46.33.74.87.84 1.06.1.19.09.34.07.36l-.21.31c-.3.45-.66.52-1.01.55-.33.02-.75.02-1.07-.02z"/></svg>
+                    WhatsApp
+                </a>
+            </div>
+            
+            <!-- Admin/Session Info (smaller/less prominent) -->
+            <div class="text-xs text-gray-400 text-center pt-2 border-t border-gray-100">
+                <p>Admin ID: <span id="adminIdDisplay" class="font-semibold text-gray-500">Loading...</span> | Session ID: <span id="userIdDisplay">Authenticating...</span></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase Imports and Logic -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, onSnapshot, setLogLevel, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Global Firebase variables provided by the environment
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        
+        let ADMIN_USER_ID = '';
+
+        // --- Firebase Initialization & Authentication ---
+        let db;
+        let auth;
+        let userId = null;
+        let isAuthReady = false;
+        let correctCaptchaAnswer = 0; // Global variable for CAPTCHA
+
+        setLogLevel('Debug'); 
+
+        const app = initializeApp(firebaseConfig);
+        db = getFirestore(app);
+        auth = getAuth(app);
+
+        const QUOTE_COLLECTION_PATH = `/artifacts/${appId}/public/data/quote_requests`;
+
+        // Authentication State Listener
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                userId = user.uid;
+            } else if (initialAuthToken) {
+                try {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                    userId = auth.currentUser.uid;
+                } catch (error) {
+                    console.error("Error signing in with custom token:", error);
+                    await signInAnonymously(auth);
+                    userId = auth.currentUser.uid;
+                }
+            } else {
+                await signInAnonymously(auth);
+                userId = auth.currentUser.uid;
+            }
+            
+            if (!ADMIN_USER_ID) {
+                // If this is the first time the app loads, set the admin ID to the current user's ID
+                ADMIN_USER_ID = userId;
+            }
+            isAuthReady = true;
+
+            document.getElementById('userIdDisplay').textContent = userId;
+            document.getElementById('adminIdDisplay').textContent = ADMIN_USER_ID;
+            console.log("Firestore initialized. User ID:", userId);
+            
+            setupNavigation();
+            setupRealTimeListener();
+            
+            // New calls for CAPTCHA and Local Storage recall
+            generateCaptcha();
+            loadSavedContact();
+
+            showView('selection'); // Start on the new selection view
+            setupFormValidationListeners();
+            toggleProjectFields(); 
+        });
+
+
+        // --- Local Storage and Contact Recall (Requested Feature) ---
+
+        /**
+         * Loads the last saved contact information from localStorage and pre-fills the form.
+         */
+        function loadSavedContact() {
+            try {
+                const savedContact = localStorage.getItem('avdesigns_contact');
+                if (savedContact) {
+                    const contact = JSON.parse(savedContact);
+                    document.getElementById('customerName').value = contact.name || '';
+                    document.getElementById('customerEmail').value = contact.email || '';
+                    document.getElementById('customerMobile').value = contact.mobile || '';
+                    console.log("Contact details pre-filled from local storage.");
+                }
+            } catch (e) {
+                console.error("Error loading contact from localStorage:", e);
+                localStorage.removeItem('avdesigns_contact'); // Clear invalid data
+            }
+        }
+
+
+        // --- Navigation and Utility Functions ---
+
+        function setupNavigation() {
+            const navViewer = document.getElementById('nav-viewer');
+            const navBar = document.getElementById('navigation-bar'); 
+
+            if (userId === ADMIN_USER_ID) {
+                // Admin user needs the navigation bar to switch views
+                navViewer.classList.remove('hidden');
+                navBar.classList.remove('hidden');
+            } else {
+                // Client user only sees the form selection, so the bar is hidden
+                navViewer.classList.add('hidden');
+                navBar.classList.add('hidden');
+            }
+        }
+
+        /**
+         * Generic function to switch between the three main screens.
+         */
+        window.showView = function(viewName) {
+            const selectionView = document.getElementById('project-selection-view');
+            const formView = document.getElementById('quote-form-view');
+            const viewerView = document.getElementById('quote-viewer-view');
+            const navForm = document.getElementById('nav-form');
+            const navViewer = document.getElementById('nav-viewer');
+            const adminWarning = document.getElementById('admin-warning');
+
+            const deactivate = (btn) => {
+                if(btn) {
+                    btn.classList.remove('bg-av-primary', 'text-white');
+                    btn.classList.add('text-av-primary', 'bg-gray-200', 'hover:bg-gray-300');
+                }
+            }
+            
+            deactivate(navForm);
+            deactivate(navViewer);
+
+            selectionView.classList.add('hidden');
+            formView.classList.add('hidden');
+            viewerView.classList.add('hidden');
+            adminWarning.classList.add('hidden');
+            
+            if (viewName === 'selection') {
+                selectionView.classList.remove('hidden');
+                if (navForm) {
+                    navForm.classList.remove('text-av-primary', 'bg-gray-200', 'hover:bg-gray-300');
+                    navForm.classList.add('bg-av-primary', 'text-white');
+                }
+                document.getElementById('projectType').value = ''; // Clear selected type on back
+                toggleProjectFields(); // Hide details container
+            } else if (viewName === 'form') {
+                formView.classList.remove('hidden');
+                if (navForm) {
+                    navForm.classList.remove('text-av-primary', 'bg-gray-200', 'hover:bg-gray-300');
+                    navForm.classList.add('bg-av-primary', 'text-white');
+                }
+            } else if (viewName === 'viewer') {
+                if (navViewer.classList.contains('hidden')) {
+                     return; 
+                }
+                
+                navViewer.classList.remove('text-av-primary', 'bg-gray-200', 'hover:bg-gray-300');
+                navViewer.classList.add('bg-av-primary', 'text-white');
+
+                if (userId === ADMIN_USER_ID) {
+                    viewerView.classList.remove('hidden');
+                } else {
+                    viewerView.classList.remove('hidden'); 
+                    adminWarning.classList.remove('hidden'); 
+                    document.getElementById('loadingIndicator').classList.add('hidden');
+                    document.getElementById('quoteList').innerHTML = '';
+                    document.getElementById('noQuotesMessage').classList.add('hidden');
+                }
+            }
+        }
+        
+        /**
+         * Function called when a project card is clicked. Sets the type and shows the form.
+         */
+        window.selectProjectType = function(type) {
+            document.getElementById('projectType').value = type;
+            document.getElementById('form-title').textContent = `Request Quote for: ${type}`;
+            toggleProjectFields(); // Set up dynamic fields based on type
+            showView('form'); // Switch to the form view
+        }
+
+        function displayStatus(message, color) {
+            const status = document.getElementById('statusMessage');
+            status.textContent = message;
+            status.className = `text-center text-sm mt-4 p-2 rounded-lg block`;
+            
+            if (color === 'red') {
+                status.classList.add('bg-red-100', 'text-red-700');
+            } else if (color === 'blue') {
+                // Using a soft blue for processing messages
+                status.classList.add('bg-blue-100', 'text-blue-700');
+            } else {
+                 status.classList.add('hidden');
+            }
+            if (color !== 'none') status.classList.remove('hidden');
+
+            if (color !== 'none') {
+                setTimeout(() => {
+                    status.classList.add('hidden');
+                }, 5000);
+            }
+        }
+
+        // --- Dynamic Field Toggler ---
+
+        /**
+         * Toggles the visibility of dimension fields and changes image labels based on Project Type,
+         * and shows/hides the entire details container.
+         */
+        window.toggleProjectFields = function() {
+            const projectType = document.getElementById('projectType').value;
+            const detailsContainer = document.getElementById('project-details-container'); 
+            const blindsSection = document.getElementById('blinds-fields-section');
+            const secondaryImageContainer = document.getElementById('secondary-image-container');
+            const primaryImageLabel = document.getElementById('primary-image-label');
+
+            // Step 1: Show/Hide the main details container (Sections 2 and 3)
+            if (projectType) {
+                detailsContainer.classList.remove('hidden');
+            } else {
+                detailsContainer.classList.add('hidden');
+            }
+
+            // Step 2: Handle internal section toggles (Blinds-specific)
+            secondaryImageContainer.classList.remove('hidden');
+            primaryImageLabel.textContent = 'Photo of Area / Main Reference';
+
+            // Toggle Blinds-specific fields
+            if (projectType === 'Blinds') {
+                blindsSection.classList.remove('hidden');
+                secondaryImageContainer.classList.add('hidden');
+                primaryImageLabel.textContent = 'Photo of Window / Area for Blinds';
+            } else {
+                blindsSection.classList.add('hidden');
+            }
+
+            checkFormValidity();
+        }
+
+        // --- CAPTCHA Logic (Requested Feature) ---
+
+        /**
+         * Generates a new random addition problem for the CAPTCHA.
+         */
+        function generateCaptcha() {
+            const num1 = Math.floor(Math.random() * 9) + 1; // 1-9
+            const num2 = Math.floor(Math.random() * 9) + 1; // 1-9
+            correctCaptchaAnswer = num1 + num2;
+            
+            const captchaLabel = document.getElementById('captchaLabel');
+            const captchaInput = document.getElementById('captchaInput');
+
+            if (captchaLabel) {
+                captchaLabel.textContent = `Please solve: ${num1} + ${num2} = ?`;
+            }
+            if (captchaInput) {
+                captchaInput.value = '';
+            }
+        }
+
+        /**
+         * Checks if the user's CAPTCHA answer is correct.
+         */
+        function checkCaptchaValidity() {
+            const userAnswer = parseInt(document.getElementById('captchaInput').value, 10);
+            return userAnswer === correctCaptchaAnswer;
+        }
+
+        // --- Image Handling ---
+
+        window.handleImageUpload = function(event, type) {
+            const file = event.target.files[0];
+            const previewId = type === 'primary' ? 'primary-image-preview' : 'secondary-image-preview';
+            const previewContainer = document.getElementById(previewId);
+            
+            previewContainer.innerHTML = ''; 
+
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = document.createElement('img');
+                    img.src = e.target.result;
+                    img.alt = type === 'primary' ? "Primary Project Photo Preview" : "Secondary Sketch/Note Preview";
+                    previewContainer.appendChild(img);
+                };
+                reader.readAsDataURL(file);
+            } else {
+                 const defaultText = type === 'primary' ? 'Primary Photo Preview' : 'Secondary Image Preview';
+                 previewContainer.innerHTML = `<span class="text-gray-400 text-sm">${defaultText}</span>`;
+            }
+            checkFormValidity();
+        }
+        
+        function fileToBase64(file, filename) {
+            if (!file) return Promise.resolve(null);
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target.result);
+                reader.onerror = (error) => {
+                    console.error("Error reading file:", filename, error);
+                    displayStatus(`Warning: ${filename} could not be read and will not be saved.`, 'red');
+                    resolve(null);
+                };
+                // Enforce a strict file size limit (e.g., 800KB) for Firestore base64 storage
+                if (file.size > 800000) { 
+                    displayStatus(`Warning: ${filename} is too large (>800KB). It will not be saved to the database.`, 'red');
+                    resolve(null);
+                    return;
+                }
+                reader.readAsDataURL(file);
+            });
+        }
+
+
+        // --- Form Validation and Submission ---
+
+        function checkFormValidity() {
+            const name = document.getElementById('customerName').value.trim();
+            const email = document.getElementById('customerEmail').value.trim();
+            const projectType = document.getElementById('projectType').value;
+            const submitButton = document.getElementById('submitButton');
+            const isCaptchaValid = checkCaptchaValidity(); // Check CAPTCHA status
+            
+            let isFormValid = name && email && projectType && isCaptchaValid;
+
+            // SPECIAL VALIDATION: If Blinds is selected, check dimensions and quantity
+            if (projectType === 'Blinds') {
+                const width = parseFloat(document.getElementById('width_mm').value);
+                const length = parseFloat(document.getElementById('length_mm').value);
+                const quantity = parseInt(document.getElementById('quantity').value);
+
+                // Check that width, length, and quantity are positive numbers
+                if (!(width > 0 && length > 0 && quantity > 0)) {
+                    isFormValid = false;
+                }
+            }
+
+            submitButton.disabled = !isFormValid;
+        }
+
+        function setupFormValidationListeners() {
+            // Add listeners to all relevant fields, including the new CAPTCHA input
+            ['customerName', 'customerEmail', 'projectType', 'width_mm', 'length_mm', 'quantity', 'captchaInput'].forEach(id => {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.addEventListener('input', checkFormValidity);
+                }
+            });
+        }
+
+        /**
+         * Submits the quote request to Firestore.
+         */
+        window.submitQuote = async function() {
+            if (!isAuthReady || document.getElementById('submitButton').disabled) {
+                displayStatus("Please ensure all required fields are filled and the security check is passed.", 'red');
+                return;
+            }
+
+            const name = document.getElementById('customerName').value.trim();
+            const email = document.getElementById('customerEmail').value.trim();
+            const mobile = document.getElementById('customerMobile').value.trim();
+            const projectType = document.getElementById('projectType').value;
+            const notes = document.getElementById('projectNotes').value.trim();
+            
+            const primaryImageFile = document.getElementById('primaryProjectImage').files[0];
+            const secondaryImageContainer = document.getElementById('secondary-image-container');
+            const secondaryImageFile = secondaryImageContainer.classList.contains('hidden') 
+                                        ? null 
+                                        : document.getElementById('secondaryProjectImage').files[0];
+
+
+            document.getElementById('submitButton').disabled = true;
+            document.getElementById('submitButton').textContent = 'Processing Images...';
+
+            // Convert images to Base64 strings before submission
+            const primaryImageDataUrl = await fileToBase64(primaryImageFile, 'Primary Image');
+            const secondaryImageDataUrl = await fileToBase64(secondaryImageFile, 'Secondary Image');
+
+            document.getElementById('submitButton').textContent = 'Submitting...';
+            displayStatus("Saving quote request...", 'blue');
+
+            let dimensionsAndQuantity = {};
+            if (projectType === 'Blinds') {
+                dimensionsAndQuantity = {
+                    width_mm: parseFloat(document.getElementById('width_mm').value),
+                    length_mm: parseFloat(document.getElementById('length_mm').value),
+                    quantity: parseInt(document.getElementById('quantity').value)
+                };
+            }
+
+            // Prepare data object
+            const quoteData = {
+                timestamp: serverTimestamp(), 
+                submittedBy: userId,
+                customer: { name, email, mobile },
+                project: {
+                    type: projectType,
+                    notes: notes,
+                    ...dimensionsAndQuantity 
+                },
+                primaryImageDataUrl: primaryImageDataUrl, 
+                secondaryImageDataUrl: secondaryImageDataUrl,
+                status: 'New' 
+            };
+
+            const quoteCollectionRef = collection(db, QUOTE_COLLECTION_PATH);
+            
+            try {
+                const docRef = await addDoc(quoteCollectionRef, quoteData);
+                
+                // 1. Save contact details to local storage for recall
+                localStorage.setItem('avdesigns_contact', JSON.stringify({
+                    name: name,
+                    email: email,
+                    mobile: mobile
+                }));
+
+                // No email notification step, directly show success modal
+                window.showSuccessModal(`Quote Request for ${projectType} submitted! We will contact you shortly to discuss your project.`);
+                
+                document.getElementById('submitButton').disabled = false;
+                document.getElementById('submitButton').textContent = 'Submit Quote Request';
+                displayStatus("", 'none'); 
+
+            } catch (e) {
+                console.error("Error adding document: ", e);
+                displayStatus(`Error: Failed to save data. See console for details.`, 'red');
+                document.getElementById('submitButton').disabled = false;
+                document.getElementById('submitButton').textContent = 'Submit Quote Request';
+            }
+        }
+
+        window.closeSuccessModal = function() {
+            document.getElementById('success-modal').classList.add('hidden');
+            document.getElementById('success-modal').classList.remove('flex');
+            
+            // Clear the non-contact-recall fields and regenerate CAPTCHA
+            document.getElementById('projectType').value = '';
+            document.getElementById('projectNotes').value = '';
+            document.getElementById('width_mm').value = '';
+            document.getElementById('length_mm').value = '';
+            document.getElementById('quantity').value = '1';
+
+            // Clear file inputs (must be done by setting value to empty string)
+            document.getElementById('primaryProjectImage').value = '';
+            document.getElementById('secondaryProjectImage').value = '';
+
+            document.getElementById('primary-image-preview').innerHTML = '<span class="text-gray-400 text-sm">Primary Photo Preview</span>';
+            document.getElementById('secondary-image-preview').innerHTML = '<span class="text-gray-400 text-sm">Secondary Image Preview</span>';
+            
+            generateCaptcha(); // Regenerate the CAPTCHA for the next submission
+            
+            toggleProjectFields(); // Hide the project details container
+            showView('selection'); // Return to the selection screen
+            document.getElementById('submitButton').disabled = true;
+            displayStatus("", 'none'); 
+        };
+        
+        // This function is new and handles setting the message for the modal
+        window.showSuccessModal = function(message) {
+             document.getElementById('modal-message').textContent = message;
+             document.getElementById('success-modal').classList.remove('hidden');
+             document.getElementById('success-modal').classList.add('flex');
+        }
+
+        // --- Real-Time Listener Function (Admin Viewer) ---
+
+        function setupRealTimeListener() {
+            if (!isAuthReady) return; 
+            
+            const quoteCollectionRef = collection(db, QUOTE_COLLECTION_PATH);
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            const noQuotesMessage = document.getElementById('noQuotesMessage');
+
+            onSnapshot(quoteCollectionRef, (snapshot) => {
+                loadingIndicator.classList.add('hidden');
+                
+                const quotes = [];
+                snapshot.forEach(doc => {
+                    quotes.push({ id: doc.id, ...doc.data() });
+                });
+
+                if (quotes.length === 0) {
+                    noQuotesMessage.classList.remove('hidden');
+                } else {
+                    noQuotesMessage.classList.add('hidden');
+                }
+
+                quotes.sort((a, b) => {
+                    const dateA = a.timestamp?.toDate ? a.timestamp.toDate() : 0;
+                    const dateB = b.timestamp?.toDate ? b.timestamp.toDate() : 0;
+                    return dateB - dateA;
+                });
+
+                renderQuoteList(quotes);
+            }, (error) => {
+                console.error("Error setting up real-time listener:", error);
+                loadingIndicator.textContent = "Error loading quotes.";
+                loadingIndicator.classList.remove('hidden');
+            });
+        }
+
+        function renderQuoteList(quotes) {
+            const quoteListDiv = document.getElementById('quoteList');
+            quoteListDiv.innerHTML = ''; 
+
+            quotes.forEach(quote => {
+                const quoteDate = quote.timestamp?.toDate ? quote.timestamp.toDate().toLocaleDateString() : 'N/A';
+                const quoteTime = quote.timestamp?.toDate ? quote.timestamp.toDate().toLocaleTimeString() : '';
+                
+                const mobile = quote.customer?.mobile || 'N/A';
+                const projectType = quote.project?.type || 'N/A';
+                const notes = quote.project?.notes || 'No notes provided.';
+                const status = quote.status || 'New';
+                
+                // New logic for Blinds data display
+                let dimensionsHtml = '';
+                if (projectType === 'Blinds' && quote.project.width_mm && quote.project.length_mm && quote.project.quantity) {
+                     dimensionsHtml = `
+                        <div class="grid grid-cols-2 mt-3 text-sm border-t pt-3 border-gray-200">
+                            <div>
+                                <p class="text-gray-600">Dims (mm):</p>
+                                <p class="font-bold text-gray-800">${quote.project.width_mm} x ${quote.project.length_mm}</p>
+                            </div>
+                            <div>
+                                <p class="text-gray-600">Quantity:</p>
+                                <p class="font-bold text-av-primary text-xl">${quote.project.quantity}</p>
+                            </div>
+                        </div>
+                    `;
+                }
+
+
+                // --- Image Display Logic ---
+                const primaryImage = quote.primaryImageDataUrl;
+                const secondaryImage = projectType !== 'Blinds' ? quote.secondaryImageDataUrl : null;
+                let imageHtml = '';
+
+                if (primaryImage || secondaryImage) {
+                    imageHtml = `
+                        <div class="mt-3 grid grid-cols-2 gap-3 text-xs">
+                            ${primaryImage ? `
+                                <div>
+                                    <p class="text-gray-600 mb-1">${projectType === 'Blinds' ? 'Window Photo' : 'Primary Photo'}:</p>
+                                    <div class="h-16 w-full rounded-md overflow-hidden border border-gray-300">
+                                        <img src="${primaryImage}" alt="Project Image" class="w-full h-full object-cover">
+                                    </div>
+                                </div>
+                            ` : '<div></div>'}
+                             ${secondaryImage ? `
+                                <div>
+                                    <p class="text-gray-600 mb-1">Secondary Sketch/Ref:</p>
+                                    <div class="h-16 w-full rounded-md overflow-hidden border border-gray-300">
+                                        <img src="${secondaryImage}" alt="Secondary Sketch Image" class="w-full h-full object-cover">
+                                    </div>
+                                </div>
+                            ` : '<div></div>'}
+                        </div>
+                    `;
+                }
+                // --- End Image Display Logic ---
+                
+                let statusColor = 'bg-green-100 text-green-800';
+                if (status === 'New') statusColor = 'bg-yellow-100 text-yellow-800';
+                if (status === 'Quoted') statusColor = 'bg-blue-100 text-blue-800';
+
+
+                const quoteCard = document.createElement('div');
+                quoteCard.className = 'bg-av-card p-4 border border-av-border rounded-xl shadow-sm hover:shadow-md transition duration-150 relative';
+                quoteCard.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <p class="text-sm font-semibold text-av-primary truncate">ID: ${quote.id}</p>
+                        <span class="inline-flex items-center px-3 py-0.5 rounded-full text-xs font-medium ${statusColor}">
+                            ${status}
+                        </span>
+                    </div>
+                    <p class="text-lg font-bold text-gray-800 mt-1">${quote.customer.name}</p>
+                    <p class="text-sm text-gray-500">Email: ${quote.customer.email}</p>
+                    <p class="text-sm text-gray-500">Mobile: ${mobile}</p>
+                    
+                    <div class="mt-3">
+                        <p class="text-gray-600 font-semibold text-sm">Project Type:</p>
+                        <p class="font-bold text-av-primary text-lg">${projectType}</p>
+                    </div>
+
+                    ${dimensionsHtml}
+
+                    <div class="mt-3 border-t pt-3 border-gray-200">
+                        <p class="text-gray-600 font-semibold text-sm">Notes:</p>
+                        <p class="text-sm text-gray-700 whitespace-pre-wrap">${notes}</p>
+                    </div>
+
+                    ${imageHtml}
+
+                    <p class="text-xs text-gray-400 mt-4 border-t pt-2">Submitted by ${quote.submittedBy.substring(0, 8)}... on ${quoteDate} ${quoteTime}</p>
+                `;
+                quoteListDiv.appendChild(quoteCard);
+            });
+        }
+    </script>
+</body>
+</html>
